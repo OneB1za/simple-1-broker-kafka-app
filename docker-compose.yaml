@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  zookeeper:
+    container_name: zookeeper
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    networks:
+      - kafka-net
+
+  kafka:
+    container_name: kafka
+    image: confluentinc/cp-kafka:7.2.0
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://localhost:9092
+
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    networks:
+      - kafka-net
+
+  kafka-ui:
+    container_name: kafka-ui
+    image: provectuslabs/kafka-ui:latest
+    depends_on:
+      - kafka
+    environment:
+      KAFKA_CLUSTERS_0_NAME: kafka
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      KAFKA_CLUSTERS_0_METRICS_PORT: 19092
+      DYNAMIC_CONFIG_ENABLED: 'true'
+    ports:
+      - "8080:8080"
+    networks:
+      - kafka-net
+
+
+
+  producer:
+    container_name: producer
+    image: producer:latest
+    environment:
+      KAFKA_BROKER: "kafka:29092"
+      KAFKA_TOPIC: "testtopic"
+    networks:
+      - kafka-net
+
+  consumer:
+    container_name: consumer
+    image: consumer:latest
+    environment:
+      KAFKA_BROKER: "kafka:29092"
+      KAFKA_TOPIC: "testtopic"
+      KAFKA_GROUP_ID: "testgroup"
+    networks:
+      - kafka-net
+
+
+networks:
+  kafka-net:
+    driver: bridge
